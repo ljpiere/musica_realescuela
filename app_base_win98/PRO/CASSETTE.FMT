@@ -1,0 +1,10 @@
+@  9, 18  SAY "Titulo......"
+@  9, 30  GET  CASSETTE->TITULO  FUNCTION "@!"
+@ 11, 18  SAY "Interprete.."
+@ 11, 30  GET  CASSETTE->INTERPRETE  FUNCTION "@!"
+@ 13, 18  SAY "Autor......."
+@ 13, 30  GET  CASSETTE->AUTOR  FUNCTION "@!"
+@ 15, 18  SAY "Orquesta...."
+@ 15, 30  GET  CASSETTE->ORQUESTA  FUNCTION "@!"
+
+

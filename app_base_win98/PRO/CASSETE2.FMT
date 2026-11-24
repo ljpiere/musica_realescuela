@@ -1,0 +1,14 @@
+@  2, 29  SAY "MODIFICACION DE TITULOS"
+@  7, 18  SAY "Titulo......"
+@  7, 30  GET  CASSETTE->TITULO  picture "@!"
+@  9, 18  SAY "Interprete.."
+@  9, 30  GET  CASSETTE->INTERPRETE  picture "@!"
+@ 11, 18  SAY "Autor......."
+@ 11, 30  GET  CASSETTE->AUTOR  picture "@!"
+@ 13, 18  SAY "Orquesta...."
+@ 13, 30  GET  CASSETTE->ORQUESTA  picture  "@!"
+@ 15, 18  SAY "Cassette...."
+@ 15, 30  SAY  CASSETTE->CASETE  picture  "@!"
+@  5, 15  TO 17, 63    DOUBLE
+@  1, 15  TO  3, 63  
+

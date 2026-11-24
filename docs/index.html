@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discoteca del Abuelo</title>
+<meta name="description" content="Catálogo musical de discos, cassettes y cintas recopilado durante décadas.">
+<style>
+:root{--bg:#f6f1e7;--card:#fffaf0;--ink:#2b2118;--muted:#7a6a58;--line:#e2d6c2;--acc:#a0412d;--acc2:#f3e0c7}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1713;--card:#25201a;--ink:#efe6d8;--muted:#a8998a;--line:#3a3128;--acc:#e07a5f;--acc2:#3a2a22}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:28px 16px 12px;max-width:1150px;margin:auto}
+h1{font-family:Georgia,serif;font-size:clamp(26px,5vw,40px);margin:0}
+header p{color:var(--muted);margin:4px 0 0}
+main{max-width:1150px;margin:auto;padding:0 16px 40px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input[type=search],select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+input[type=search]{flex:1 1 260px;min-width:0}
+.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#fff}
+.chip small{opacity:.75}
+label{color:var(--muted);font-size:13px}
+.stats{color:var(--muted);font-size:13px;margin:8px 2px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:2px solid var(--line);padding:8px;cursor:pointer;white-space:nowrap;user-select:none}
+th.on{color:var(--acc)}
+td{border-bottom:1px solid var(--line);padding:7px 8px;vertical-align:top}
+td.code{font-family:ui-monospace,Consolas,monospace;white-space:nowrap;color:var(--muted)}
+td a{color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);cursor:pointer}
+td a:hover{color:var(--acc)}
+.tag{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--acc2);white-space:nowrap}
+.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.g{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left;font:inherit;color:inherit;display:flex;justify-content:space-between;gap:8px}
+.g:hover{border-color:var(--acc)}
+.g b{font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.g span{color:var(--muted);font-variant-numeric:tabular-nums}
+.pager{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:12px}
+button.btn{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+button.btn:disabled{opacity:.4;cursor:default}
+.active-filter{display:none;margin-top:8px}
+@media (max-width:640px){.hide-sm{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Discoteca del Abuelo</h1>
+  <p id="sub">Cargando catálogo…</p>
+</header>
+<main>
+  <div class="panel">
+    <div class="row">
+      <input type="search" id="q" placeholder="Buscar título, intérprete, autor, orquesta o código…" aria-label="Buscar">
+      <label>Ordenar por
+        <select id="sort">
+          <option value="1">Título</option><option value="2">Intérprete</option>
+          <option value="3">Autor</option><option value="4">Orquesta</option>
+          <option value="5">Ubicación (código)</option><option value="0">Colección</option>
+        </select>
+      </label>
+    </div>
+    <div class="row" id="cols" style="margin-top:10px"></div>
+    <div class="row active-filter" id="af"></div>
+  </div>
+
+  <div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <div class="row" id="views"></div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div id="out"></div>
+    <div class="pager" id="pager"></div>
+  </div>
+</main>
+<script>
+const F=["coleccion","titulo","interprete","autor","orquesta","codigo"];
+const LBL={coleccion:"Colección",titulo:"Título",interprete:"Intérprete",autor:"Autor",orquesta:"Orquesta",codigo:"Ubicación"};
+const VIEWS=[["canciones","Canciones",null],["interprete","Por intérprete",2],["autor","Por autor",3],["orquesta","Por orquesta",4],["soporte","Por disco / casete",5]];
+let rows=[],st={q:"",cols:new Set(),sort:1,dir:1,view:"canciones",page:0,pin:null};
+const PER=100,$=id=>document.getElementById(id);
+const norm=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const soporte=r=>{const p=r[5].split("-");return r[0]==="Discos"?p.slice(0,2).join("-"):p[0]};
+const keyOf=(r,i)=>i===5?r[0]+" · "+soporte(r):r[i];
+
+fetch("catalogo.json").then(r=>r.json()).then(d=>{
+  rows=d.filas.map(r=>{r.s=norm(r.join(" "));return r});
+  const c={};rows.forEach(r=>c[r[0]]=(c[r[0]]||0)+1);
+  $("sub").textContent=`${rows.length.toLocaleString("es")} canciones guardadas en ${Object.keys(c).length} colecciones · Ibagué, 1996`;
+  $("cols").innerHTML=Object.entries(c).map(([k,n])=>`<button class="chip" data-c="${k}" aria-pressed="false">${k} <small>${n.toLocaleString("es")}</small></button>`).join("");
+  $("views").innerHTML=VIEWS.map(([k,l])=>`<button class="chip" data-v="${k}">${l}</button>`).join("");
+  readHash();render();
+});
+
+$("cols").onclick=e=>{const b=e.target.closest("[data-c]");if(!b)return;const k=b.dataset.c;st.cols.has(k)?st.cols.delete(k):st.cols.add(k);st.page=0;render()};
+$("views").onclick=e=>{const b=e.target.closest("[data-v]");if(!b)return;st.view=b.dataset.v;st.pin=null;st.page=0;render()};
+let t;$("q").oninput=e=>{clearTimeout(t);t=setTimeout(()=>{st.q=e.target.value;st.page=0;render()},150)};
+$("sort").onchange=e=>{st.sort=+e.target.value;st.dir=1;st.page=0;render()};
+
+function filtered(){
+  const terms=norm(st.q).split(/\s+/).filter(Boolean);
+  return rows.filter(r=>(!st.cols.size||st.cols.has(r[0]))&&terms.every(w=>r.s.includes(w))&&(!st.pin||keyOf(r,st.pin[0])===st.pin[1]));
+}
+function cmp(i){return (a,b)=>{const x=i===5?a[0]+a[5]:a[i],y=i===5?b[0]+b[5]:b[i];if(!x!==!y)return x?-1:1;return st.dir*x.localeCompare(y,"es")||a[1].localeCompare(b[1],"es")}}
+
+function render(){
+  document.querySelectorAll("[data-c]").forEach(b=>b.setAttribute("aria-pressed",st.cols.has(b.dataset.c)));
+  document.querySelectorAll("[data-v]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===st.view&&!st.pin));
+  $("sort").value=st.sort;
+  const af=$("af");
+  if(st.pin){af.style.display="flex";af.innerHTML=`<span class="tag">${LBL[F[st.pin[0]]]}: ${esc(st.pin[1])}</span><button class="chip" id="unpin">✕ quitar filtro</button>`;$("unpin").onclick=()=>{st.pin=null;render()}}
+  else af.style.display="none";
+  const list=filtered();
+  const v=VIEWS.find(x=>x[0]===st.view);
+  if(v[2]!==null&&!st.pin) groups(list,v[2]); else songs(list);
+  writeHash();
+}
+function songs(list){
+  list.sort(cmp(st.sort));
+  const pages=Math.max(1,Math.ceil(list.length/PER));st.page=Math.min(st.page,pages-1);
+  const slice=list.slice(st.page*PER,(st.page+1)*PER);
+  $("stats").textContent=`${list.length.toLocaleString("es")} canciones`;
+  const th=[1,2,3,4,5,0].map(i=>`<th data-s="${i}" class="${i===st.sort?"on":""} ${i===4||i===0?"hide-sm":""}">${LBL[F[i]]}${i===st.sort?(st.dir>0?" ▲":" ▼"):""}</th>`).join("");
+  const link=(r,i)=>r[i]?`<a data-p="${i}" data-k="${esc(keyOf(r,i))}">${esc(r[i])}</a>`:"";
+  $("out").innerHTML=`<div class="tablewrap"><table><thead><tr>${th}</tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(r[1])}</td><td>${link(r,2)}</td><td>${link(r,3)}</td><td class="hide-sm">${link(r,4)}</td><td class="code">${link(r,5)}</td><td class="hide-sm"><span class="tag">${r[0]}</span></td></tr>`).join("")}</tbody></table></div>`;
+  $("out").querySelectorAll("th").forEach(h=>h.onclick=()=>{const s=+h.dataset.s;st.dir=s===st.sort?-st.dir:1;st.sort=s;render()});
+  $("out").querySelectorAll("a[data-p]").forEach(a=>a.onclick=()=>{st.pin=[+a.dataset.p,a.dataset.k];st.page=0;st.sort=a.dataset.p==="5"?5:1;st.dir=1;scrollTo(0,0);render()});
+  $("pager").innerHTML=pages>1?`<button class="btn" id="pv" ${st.page?"":"disabled"}>← Anterior</button><span>${st.page+1} / ${pages}</span><button class="btn" id="nx" ${st.page<pages-1?"":"disabled"}>Siguiente →</button>`:"";
+  if(pages>1){$("pv").onclick=()=>{st.page--;render()};$("nx").onclick=()=>{st.page++;render()}}
+}
+function groups(list,i){
+  const m=new Map();list.forEach(r=>{const k=keyOf(r,i);if(k&&r[i])m.set(k,(m.get(k)||0)+1)});
+  let arr=[...m];arr.sort(i===5?(a,b)=>a[0].localeCompare(b[0],"es",{numeric:true}):(a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"es"));
+  const total=arr.length,shown=arr.slice(0,(st.page+1)*300);
+  $("stats").textContent=`${total.toLocaleString("es")} ${i===5?"discos / casetes":"nombres"} · ${i===5?"en orden de ubicación":"ordenados por cantidad de canciones"} · clic para ver sus canciones`;
+  $("out").innerHTML=`<div class="groups">${shown.map(([k,n])=>`<button class="g" data-k="${esc(k)}"><b>${esc(k)}</b><span>${n}</span></button>`).join("")}</div>`;
+  $("out").querySelectorAll(".g").forEach(b=>b.onclick=()=>{st.pin=[i,b.dataset.k];st.page=0;st.sort=i===5?5:1;st.dir=1;scrollTo(0,0);render()});
+  $("pager").innerHTML=shown.length<total?`<button class="btn" id="more">Mostrar más</button>`:"";
+  if(shown.length<total)$("more").onclick=()=>{st.page++;render()};
+}
+function writeHash(){const p=new URLSearchParams();if(st.q)p.set("q",st.q);if(st.cols.size)p.set("c",[...st.cols].join(","));if(st.view!=="canciones")p.set("v",st.view);if(st.pin)p.set("f",st.pin.join("|"));history.replaceState(null,"","#"+p)}
+function readHash(){const p=new URLSearchParams(location.hash.slice(1));st.q=p.get("q")||"";$("q").value=st.q;if(p.get("c"))st.cols=new Set(p.get("c").split(","));if(p.get("v"))st.view=p.get("v");if(p.get("f")){const[a,...b]=p.get("f").split("|");st.pin=[+a,b.join("|")]}}
+</script>
+</body>
+</html>

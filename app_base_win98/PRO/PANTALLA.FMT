@@ -1,0 +1,15 @@
+@  1, 24  SAY "REGISTRO Y LOCALIZACION DE TEMAS"
+@  5, 16  SAY "Titulo.........."
+@  5, 32  GET  CASSETTE->TITULO
+@  7, 16  SAY "Interprete......"
+@  7, 32  GET  CASSETTE->INTERPRETE
+@  9, 16  SAY "Autor..........."
+@  9, 32  GET  CASSETTE->AUTOR
+@ 11, 16  SAY "Orquesta........"
+@ 11, 32  GET  CASSETTE->ORQUESTA
+@ 14, 34  SAY "LOCALIZACION"
+@ 17, 18  SAY "Cassette No: xxx     Lado: x     Tema No: xx"
+@  3, 13  TO 21, 66    DOUBLE
+@ 13, 16  TO 18, 63  
+@ 15, 17  TO 15, 62  
+

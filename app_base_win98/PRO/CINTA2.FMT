@@ -1,0 +1,14 @@
+@  2, 29  SAY "MODIFICACION DE TITULOS"
+@  7, 18  SAY "Titulo......"
+@  7, 30  GET  CINTAS->TITULO  PICTURE  "@!"
+@  9, 18  SAY "Interprete.."
+@  9, 30  GET  CINTAS->INTERPRETE  PICTURE  "@!"
+@ 11, 18  SAY "Autor......."
+@ 11, 30  GET  CINTAS->AUTOR  PICTURE  "@!"
+@ 13, 18  SAY "Orquesta...."
+@ 13, 30  GET  CINTAS->ORQUESTA  PICTURE  "@!"
+@ 15, 18  SAY "Cassette...."
+@ 15, 30  SAY  CINTAS->CASETE  PICTURE  "@!"
+@  5, 15  TO 17, 63    DOUBLE
+@  1, 15  TO  3, 63  
+

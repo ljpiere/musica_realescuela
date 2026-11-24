@@ -1,0 +1,6 @@
+
+. uit
+*** Comando no reconocido
+     ?
+uit
+. quit
